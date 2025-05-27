@@ -1,4 +1,4 @@
-This is a project to help me not procrastinate. If i'm forced to learn coding, i might as well use it for myself.
+#This is a project to help me not procrastinate. If i'm forced to learn coding, i might as well use it for myself.
 
 Anything i want to learn, or master? I'll plan it on paper then implement it as a course in here.
 
