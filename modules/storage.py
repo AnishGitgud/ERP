@@ -7,9 +7,12 @@ import json
 import os
 from datetime import datetime
 
+import modules.evaluation as eva
+
 DATA_DIR = "data"   # Directory to store data files
 STREAMS_FILE = os.path.join(DATA_DIR, "streams.json")  # File to store stream info
 COURSES_FILE = os.path.join(DATA_DIR, "courses.json")  # File to store course info
+EVALUATIONS_FILE = os.path.join(DATA_DIR, "evaluations.json")   # File to store evaluation info
 
 
 # ensure the data directory exists
@@ -91,8 +94,6 @@ def remove_stream(stream_name):
         save_courses(courses_data)
 
 # Evaluation storage functions
-EVALUATIONS_FILE = os.path.join(DATA_DIR, "evaluations.json")
-
 def load_evaluations():
     """Load all evaluations data"""
     ensure_data_dir()
@@ -168,3 +169,35 @@ def update_evaluation_review(stream_name, course_name, eval_type, eval_category,
             save_evaluations(evals_data)
             return True
     return False
+
+def calculate_course_score(stream_name, course_name):
+    """
+    Calculate final course score and grade based on all evaluations
+    Returns dict with final percentage, letter grade, and detailed breakdown
+    """
+
+    try:
+        # Use the evaluation module to calculate the score
+        course_score = eva.calculate_course_score(stream_name, course_name)
+        store_course_evals_in_course_json(stream_name, course_name, course_score)
+        return course_score
+        
+    except Exception as e:
+        return {
+            "error": f"Error calculating course score: {str(e)}",
+            "final_percentage": 0,
+            "letter_grade": "F",
+            "main_components": {},
+            "additional_components": {},
+            "total_main_percentage": 0,
+            "total_additional_points": 0
+        }
+
+def store_course_evals_in_course_json(stream_name, course_name, course_score):
+    """after calculating the course score, save it to corresponding evaluation field in data/courses.json"""
+    ensure_data_dir()
+    courses_data = load_courses()
+    courses_data["courses"][stream_name][course_name].update({
+        "evaluations": course_score
+    })
+    save_courses(courses_data)

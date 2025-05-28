@@ -24,6 +24,7 @@ from modules.stream import Stream
 
 from modules import storage as stg
 from modules import schedule as sch
+from modules.evaluation import ADDITIONAL_COMPONENT_POINTS, MAIN_COMPONENT_WEIGHTS
 
 std.set_page_config(
     layout="wide",
@@ -73,7 +74,7 @@ def show_evaluation_page():
     courses_data = stg.load_courses()
     
     if not streams_data["streams"]:
-        std.warning("No streams found. Please create a stream first.")
+        std.warning("No streams found. Please create a stream firstd.")
         return
     
     # Stream selection
@@ -83,7 +84,7 @@ def show_evaluation_page():
     # Course selection
     stream_courses = courses_data["courses"].get(selected_stream, {})
     if not stream_courses:
-        std.warning(f"No courses found in stream '{selected_stream}'. Please add courses first.")
+        std.warning(f"No courses found in stream '{selected_stream}'. Please add courses firstd.")
         return
     
     course_names = list(stream_courses.keys())
@@ -99,6 +100,9 @@ def show_evaluation_tables(stream_name, course_name):
     # Get evaluations data
     evaluations = stg.get_course_evaluations(stream_name, course_name)
     
+    # Get course evaluation
+    evaluated_course = stg.calculate_course_score(stream_name, course_name)
+
     # Create two columns for the tables
     col1, col2 = std.columns(2)
     
@@ -111,11 +115,62 @@ def show_evaluation_tables(stream_name, course_name):
         show_additional_evaluations(stream_name, course_name, evaluations["additional_evals"])
 
     std.markdown('---')
+    std.markdown(f"## Course Statistics for {course_name}")
+    
+    # Course overview in columns
+    col1, col2 = std.columns(2)
+    with col1:
+        std.metric("Course Grade", evaluated_course.get('letter_grade'))
+    with col2:
+        std.metric("Course Score", f"{evaluated_course.get('final_percentage')}%")
+    
+    # Main Components Table with individual progress bars
+    std.markdown("### 📚 Main Components")
+    main_evals = evaluated_course.get("main_components", {})
+    
+    if main_evals:
+        for component_name, component_data in main_evals.items():
+            max_weight = MAIN_COMPONENT_WEIGHTS.get(component_name, 20)
+            current_score = component_data.get('scaled_percentage', 0)
+            submissions = component_data.get('submissions_count', 0)
+            
+            col1, col2, col3 = std.columns([2, 3, 1])
+            with col1:
+                std.write(f"**{component_name.replace('_', ' ').title()}**")
+            with col2:
+                # Custom progress bar with individual max
+                progress = min(current_score / max_weight, 1.0) if max_weight > 0 else 0
+                std.progress(progress)
+                std.caption(f"{current_score:.1f}% / {max_weight}% max")
+            with col3:
+                std.metric("Submissions", submissions)
+    
+    # Additional Components Table with individual progress bars
+    std.markdown("### ➕ Additional Components")
+    add_evals = evaluated_course.get("additional_components", {})
+    
+    if add_evals:
+        for component_name, component_data in add_evals.items():
+            max_points = ADDITIONAL_COMPONENT_POINTS.get(component_name, 1)
+            current_score = component_data.get('scaled_points', 0)
+            submissions = component_data.get('submissions_count', 0)
+            
+            col1, col2, col3 = std.columns([2, 3, 1])
+            with col1:
+                std.write(f"**{component_name.replace('_', ' ').title()}**")
+            with col2:
+                # Custom progress bar with individual max
+                progress = min(current_score / max_points, 1.0) if max_points > 0 else 0
+                std.progress(progress)
+                std.caption(f"{current_score:.1f}% / {max_points}% max")
+            with col3:
+                std.metric("Submissions", submissions)
+
+    std.markdown('---')
     std.markdown("### Component Weigths & Grading System")
     std.markdown("### ")
     std.markdown("##### Component Weigths")
     std.markdown('---')
-
     c1, c2, c3, c4, c5 = std.columns(5)
     with c1:
         std.caption("### Main evaluations")
@@ -383,7 +438,7 @@ def show_review_form(stream_name, course_name, eval_type, eval_category, eval_en
     
     # Review form for both main and additional evaluatives(base grade that can be converted to evaluative specific score)
     with std.form(form_key):
-        grade = std.selectbox("Grade", ["A", "B", "C", "D", "F"], key=f"grade_{form_key}")
+        grade = std.selectbox("Grade", ["A", "B", "C", "D", "E","F"], key=f"grade_{form_key}")
         review_comments = std.text_area("Review Comments", key=f"comments_{form_key}")
         feedback = std.text_area("Feedback for Improvement", key=f"feedback_{form_key}")
         
@@ -411,7 +466,7 @@ def show_review_form(stream_name, course_name, eval_type, eval_category, eval_en
                     std.success("Review submitted successfully!")
                     # Add a small delay to show the success message
                     import time
-                    time.sleep(5)
+                    time.sleep(2)
                     std.rerun()
                 else:
                     std.error("Failed to submit review. Please check the console for errors.")
@@ -584,6 +639,7 @@ def show_stream_details_page():
 
     with c2:
         std.write(f"### Stream: {stream.stream_name}")
+        std.write(f"##### Projected score: <Implement this>")
         
         # Create tabs for better organization
         tab1, tab2, tab3 = std.tabs(["📚 Courses", "➕ Add Course", "Delete/Archive Course"])
@@ -598,6 +654,8 @@ def show_stream_details_page():
                     with std.expander(f"📚 {course_name}"):
                         std.write(f"**Description:** {course_data.get('description', 'No description')}")
                         
+                        # Course Score
+
                         # Schedule info
                         schedule_info = course_data.get('schedule', {})
                         if schedule_info:
