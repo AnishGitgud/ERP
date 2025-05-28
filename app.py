@@ -24,10 +24,19 @@ from modules.stream import Stream
 
 from modules import storage as stg
 from modules import schedule as sch
+from modules.evaluation import ADDITIONAL_COMPONENT_POINTS, MAIN_COMPONENT_WEIGHTS
 
 std.set_page_config(
     layout="wide",
 )
+
+
+
+
+# css styling location - later on
+
+
+
 
 ### Initialize session state variables
 def initialize_session():
@@ -65,7 +74,7 @@ def show_evaluation_page():
     courses_data = stg.load_courses()
     
     if not streams_data["streams"]:
-        std.warning("No streams found. Please create a stream first.")
+        std.warning("No streams found. Please create a stream firstd.")
         return
     
     # Stream selection
@@ -75,7 +84,7 @@ def show_evaluation_page():
     # Course selection
     stream_courses = courses_data["courses"].get(selected_stream, {})
     if not stream_courses:
-        std.warning(f"No courses found in stream '{selected_stream}'. Please add courses first.")
+        std.warning(f"No courses found in stream '{selected_stream}'. Please add courses firstd.")
         return
     
     course_names = list(stream_courses.keys())
@@ -91,6 +100,9 @@ def show_evaluation_tables(stream_name, course_name):
     # Get evaluations data
     evaluations = stg.get_course_evaluations(stream_name, course_name)
     
+    # Get course evaluation
+    evaluated_course = stg.calculate_course_score(stream_name, course_name)
+
     # Create two columns for the tables
     col1, col2 = std.columns(2)
     
@@ -101,6 +113,133 @@ def show_evaluation_tables(stream_name, course_name):
     with col2:
         std.write("##### Additional Evaluations")
         show_additional_evaluations(stream_name, course_name, evaluations["additional_evals"])
+
+    std.markdown('---')
+    std.markdown(f"## Course Statistics for {course_name}")
+    
+    # Course overview in columns
+    col1, col2 = std.columns(2)
+    with col1:
+        std.metric("Course Grade", evaluated_course.get('letter_grade'))
+    with col2:
+        std.metric("Course Score", f"{evaluated_course.get('final_percentage')}%")
+    
+    # Main Components Table with individual progress bars
+    std.markdown("### 📚 Main Components")
+    main_evals = evaluated_course.get("main_components", {})
+    
+    if main_evals:
+        for component_name, component_data in main_evals.items():
+            max_weight = MAIN_COMPONENT_WEIGHTS.get(component_name, 20)
+            current_score = component_data.get('scaled_percentage', 0)
+            submissions = component_data.get('submissions_count', 0)
+            
+            col1, col2, col3 = std.columns([2, 3, 1])
+            with col1:
+                std.write(f"**{component_name.replace('_', ' ').title()}**")
+            with col2:
+                # Custom progress bar with individual max
+                progress = min(current_score / max_weight, 1.0) if max_weight > 0 else 0
+                std.progress(progress)
+                std.caption(f"{current_score:.1f}% / {max_weight}% max")
+            with col3:
+                std.metric("Submissions", submissions)
+    
+    # Additional Components Table with individual progress bars
+    std.markdown("### ➕ Additional Components")
+    add_evals = evaluated_course.get("additional_components", {})
+    
+    if add_evals:
+        for component_name, component_data in add_evals.items():
+            max_points = ADDITIONAL_COMPONENT_POINTS.get(component_name, 1)
+            current_score = component_data.get('scaled_points', 0)
+            submissions = component_data.get('submissions_count', 0)
+            
+            col1, col2, col3 = std.columns([2, 3, 1])
+            with col1:
+                std.write(f"**{component_name.replace('_', ' ').title()}**")
+            with col2:
+                # Custom progress bar with individual max
+                progress = min(current_score / max_points, 1.0) if max_points > 0 else 0
+                std.progress(progress)
+                std.caption(f"{current_score:.1f}% / {max_points}% max")
+            with col3:
+                std.metric("Submissions", submissions)
+
+    std.markdown('---')
+    std.markdown("### Component Weigths & Grading System")
+    std.markdown("### ")
+    std.markdown("##### Component Weigths")
+    std.markdown('---')
+    c1, c2, c3, c4, c5 = std.columns(5)
+    with c1:
+        std.caption("### Main evaluations")
+        std.caption("#### (90% of course)")
+    with c2:
+        std.caption("#### Weekly Eval(M1)")
+        std.write("##### ")
+        std.caption("30% of Course")
+    with c3:
+        std.caption("#### Monthly Project(M2)")
+        std.write("##### ")
+        std.caption("20% of Course")
+    with c4:
+        std.caption("#### Catalogue(M3)")
+        std.write("##### ")
+        std.caption("20% of Course")
+    with c5:
+        std.caption("#### Notes(M4)")
+        std.write("##### ")
+        std.caption("20% of Course")
+
+    std.markdown('---')
+
+    c1, c2, c3, c4, c5 = std.columns(5)
+    with c1:
+        std.caption("### Additional evaluations")
+        std.caption("#### (1 point = 1% of course)")
+        std.caption("#### (10% of course)")
+    with c2:
+        std.caption("#### Off Time(A1)")
+        std.write("##### ")
+        std.caption("1 point")
+    with c3:
+        std.caption("#### Commissions(A2)")
+        std.write("##### ")
+        std.caption("4 points")
+    with c4:
+        std.caption("#### Post reviews(A3)")
+        std.write("##### ")
+        std.caption("2 points")
+    with c5:
+        std.caption("#### Portfolio(A4)")
+        std.write("##### ")
+        std.caption("3 points")
+
+    std.markdown('---')
+
+    std.markdown("### ")
+    std.markdown("##### Grading System")
+    std.markdown('---')
+    std.caption("### Six grade system for each component(Mi and Ai) : A(5), B(4), C(3), D(2), E(1), F(0)")
+    std.caption("### Each component can have multiple submissions - take average grade(A-F) and score(5.0 - 1.0) for a component(each Mi and Ai)")
+    std.caption("### Scale score of a component to total scale 0-100% for the course. Breakdown -")
+    std.caption("#### Mi : Scale component average score(0.0 - 5.0) and scale to component percent((0 - 30%) for M1 and (0 - 20%) for other Mi)")
+    std.caption("#### Ai : Scale component average score to specific component points. Example A4 -")
+    c1, c2, c3, c4, c5 = std.columns(5)
+    with c2:
+        std.caption("#### A4 score achieved = 4.5 out of 5")
+        std.caption("#### A4 max points = 3, Scale 0-5 to 0-3")
+        std.caption("#### Avg A4 point achieved = 4.5 * (3 - 0)/(5 - 0) = 2.7, A4 component = 2.7%")
+    std.caption("#### Add up all Mi and Ai percentages to get final course percentage out of 100%. Final course grade distribution:")
+    c1, c2, c3, c4, c5 = std.columns(5)
+    with c2:
+        std.caption("#### A - [100-90%)")
+        std.caption("#### B - [90-70%)")
+        std.caption("#### C - [70-50%)")
+        std.caption("#### D - [50-30%)")
+        std.caption("#### E - [30-20%)")
+        std.caption("#### F - [20 -0%]")
 
 def show_main_evaluations(stream_name, course_name, main_evals):
     """Show main evaluations with tabs"""
@@ -297,17 +436,15 @@ def show_review_form(stream_name, course_name, eval_type, eval_category, eval_en
             if eval_entry.get('note_type'):
                 std.write(f"**Note Type:** {eval_entry['note_type']}")
     
-    # Review form
+    # Review form for both main and additional evaluatives(base grade that can be converted to evaluative specific score)
     with std.form(form_key):
-        grade = std.selectbox("Grade", ["A", "B", "C", "D", "F"], key=f"grade_{form_key}")
+        grade = std.selectbox("Grade", ["A", "B", "C", "D", "E","F"], key=f"grade_{form_key}")
         review_comments = std.text_area("Review Comments", key=f"comments_{form_key}")
         feedback = std.text_area("Feedback for Improvement", key=f"feedback_{form_key}")
         
         submitted = std.form_submit_button("Submit Review")
         
         if submitted:
-            # std.write("DEBUG: Form submitted, processing review...")
-            
             # Validate inputs
             if not grade:
                 std.error("Please select a grade")
@@ -319,22 +456,17 @@ def show_review_form(stream_name, course_name, eval_type, eval_category, eval_en
                 "feedback": feedback
             }
             
-            # std.write(f"DEBUG: Review data prepared: {review_data}")
-            # std.write(f"DEBUG: Updating evaluation - Stream: {stream_name}, Course: {course_name}, Type: {eval_type}, Category: {eval_category}, ID: {eval_entry['id']}")
-            
             try:
                 success = stg.update_evaluation_review(
                     stream_name, course_name, eval_type, eval_category, 
                     eval_entry['id'], review_data
                 )
                 
-                # std.write(f"DEBUG: Update result: {success}")
-                
                 if success:
                     std.success("Review submitted successfully!")
                     # Add a small delay to show the success message
                     import time
-                    time.sleep(1)
+                    time.sleep(2)
                     std.rerun()
                 else:
                     std.error("Failed to submit review. Please check the console for errors.")
@@ -507,6 +639,7 @@ def show_stream_details_page():
 
     with c2:
         std.write(f"### Stream: {stream.stream_name}")
+        std.write(f"##### Projected score: <Implement this>")
         
         # Create tabs for better organization
         tab1, tab2, tab3 = std.tabs(["📚 Courses", "➕ Add Course", "Delete/Archive Course"])
@@ -521,6 +654,8 @@ def show_stream_details_page():
                     with std.expander(f"📚 {course_name}"):
                         std.write(f"**Description:** {course_data.get('description', 'No description')}")
                         
+                        # Course Score
+
                         # Schedule info
                         schedule_info = course_data.get('schedule', {})
                         if schedule_info:

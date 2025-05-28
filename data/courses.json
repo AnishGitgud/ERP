@@ -75,7 +75,64 @@
             }
           }
         },
-        "evaluations": {},
+        "evaluations": {
+          "final_percentage": 10.0,
+          "letter_grade": "F",
+          "main_components": {
+            "weekend_eval": {
+              "average_score": 0,
+              "scaled_percentage": 0.0,
+              "weight": 30,
+              "submissions_count": 0
+            },
+            "monthly_project": {
+              "average_score": 0,
+              "scaled_percentage": 0.0,
+              "weight": 20,
+              "submissions_count": 0
+            },
+            "catalogue": {
+              "average_score": 0,
+              "scaled_percentage": 0.0,
+              "weight": 20,
+              "submissions_count": 0
+            },
+            "notes": {
+              "average_score": 2.5,
+              "scaled_percentage": 10.0,
+              "weight": 20,
+              "submissions_count": 2
+            }
+          },
+          "additional_components": {
+            "off_time": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 1,
+              "submissions_count": 0
+            },
+            "commissions": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 4,
+              "submissions_count": 0
+            },
+            "post_reviews": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 2,
+              "submissions_count": 0
+            },
+            "portfolio": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 3,
+              "submissions_count": 0
+            }
+          },
+          "total_main_percentage": 10.0,
+          "total_additional_points": 0.0
+        },
         "created": "2025-05-27T11:53:33.907371"
       },
       "Test_course_2": {
@@ -354,7 +411,64 @@
             }
           }
         },
-        "evaluations": {},
+        "evaluations": {
+          "final_percentage": 14.0,
+          "letter_grade": "F",
+          "main_components": {
+            "weekend_eval": {
+              "average_score": 0,
+              "scaled_percentage": 0.0,
+              "weight": 30,
+              "submissions_count": 0
+            },
+            "monthly_project": {
+              "average_score": 0,
+              "scaled_percentage": 0.0,
+              "weight": 20,
+              "submissions_count": 0
+            },
+            "catalogue": {
+              "average_score": 3.5,
+              "scaled_percentage": 14.0,
+              "weight": 20,
+              "submissions_count": 2
+            },
+            "notes": {
+              "average_score": 0,
+              "scaled_percentage": 0.0,
+              "weight": 20,
+              "submissions_count": 0
+            }
+          },
+          "additional_components": {
+            "off_time": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 1,
+              "submissions_count": 0
+            },
+            "commissions": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 4,
+              "submissions_count": 0
+            },
+            "post_reviews": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 2,
+              "submissions_count": 0
+            },
+            "portfolio": {
+              "average_score": 0,
+              "scaled_points": 0.0,
+              "max_points": 3,
+              "submissions_count": 0
+            }
+          },
+          "total_main_percentage": 14.0,
+          "total_additional_points": 0.0
+        },
         "created": "2025-05-27T15:50:22.733332"
       },
       "Proportions & Perspective 1": {
@@ -744,5 +858,5 @@
       }
     }
   },
-  "last_updated": "2025-05-27T15:56:03.165258"
+  "last_updated": "2025-05-28T18:22:33.689808"
 }

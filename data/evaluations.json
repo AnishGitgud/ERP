@@ -42,7 +42,50 @@
           "portfolio": []
         }
       }
+    },
+    "Art Fundamentals 1": {
+      "Figure Drawing 1": {
+        "main_evals": {
+          "weekend_eval": [],
+          "monthly_project": [],
+          "catalogue": [
+            {
+              "id": 1,
+              "submitted_date": "2025-05-27T23:55:28.366948",
+              "status": "reviewed",
+              "title": "figure drawing male clothed 1",
+              "description": "see file",
+              "content_type": "Documentation",
+              "source_link": "D:\\Games\\visual exasperation\\LD3_M_C.kra",
+              "reviewed_date": "2025-05-28T14:22:05.186763",
+              "grade": "C",
+              "review_comments": "A lot of stiff monotonous parts, length proportions seem off; thighs are quite fucked. The whole figure looks like a thick stick. Overall, not good.",
+              "feedback": "Focus more on body proportions(adult male here) - specifically appendages' length, and torso + pelvic thicknesses. Try learning how to make a base skeletal form and add proper looking body layer on top."
+            },
+            {
+              "id": 2,
+              "submitted_date": "2025-05-28T00:08:40.458315",
+              "status": "reviewed",
+              "title": "figure drawing female clothed 1",
+              "description": "see file",
+              "content_type": "Documentation",
+              "source_link": "D:\\Games\\visual exasperation\\LD3_F_C.kra",
+              "reviewed_date": "2025-05-28T14:25:47.467008",
+              "grade": "B",
+              "review_comments": "A bit better than the male counterpart, but not really good. Proportions of appendages and some thicknesses are off.",
+              "feedback": "Again, focus on skeletal form and then the body."
+            }
+          ],
+          "notes": []
+        },
+        "additional_evals": {
+          "off_time": [],
+          "commissions": [],
+          "post_reviews": [],
+          "portfolio": []
+        }
+      }
     }
   },
-  "last_updated": "2025-05-27T17:32:34.933858"
+  "last_updated": "2025-05-28T14:25:47.469007"
 }
