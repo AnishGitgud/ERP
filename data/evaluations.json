@@ -42,7 +42,42 @@
           "portfolio": []
         }
       }
+    },
+    "Art Fundamentals 1": {
+      "Figure Drawing 1": {
+        "main_evals": {
+          "weekend_eval": [],
+          "monthly_project": [],
+          "catalogue": [
+            {
+              "id": 1,
+              "submitted_date": "2025-05-27T23:55:28.366948",
+              "status": "pending",
+              "title": "figure drawing male clothed 1",
+              "description": "see file",
+              "content_type": "Documentation",
+              "source_link": "D:\\Games\\visual exasperation\\LD3_M_C.kra"
+            },
+            {
+              "id": 2,
+              "submitted_date": "2025-05-28T00:08:40.458315",
+              "status": "pending",
+              "title": "figure drawing female clothed 1",
+              "description": "see file",
+              "content_type": "Documentation",
+              "source_link": "D:\\Games\\visual exasperation\\LD3_F_C.kra"
+            }
+          ],
+          "notes": []
+        },
+        "additional_evals": {
+          "off_time": [],
+          "commissions": [],
+          "post_reviews": [],
+          "portfolio": []
+        }
+      }
     }
   },
-  "last_updated": "2025-05-27T17:32:34.933858"
+  "last_updated": "2025-05-28T00:08:40.459314"
 }
