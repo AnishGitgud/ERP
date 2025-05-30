@@ -18,23 +18,18 @@ main page for the project with subpages-
 
 import streamlit as std
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from modules.stream import Stream
 
 from modules import storage as stg
 from modules import schedule as sch
+from modules import plans as pln
 from modules.evaluation import ADDITIONAL_COMPONENT_POINTS, MAIN_COMPONENT_WEIGHTS
 
 std.set_page_config(
     layout="wide",
 )
-
-
-
-
-# css styling location - later on
-
 
 
 
@@ -46,6 +41,7 @@ def initialize_session():
         std.session_state.streams = []  # List to hold Stream instances
         std.session_state.current_stream = None  # Currently selected stream
         std.session_state.page = "home"  # Current page in the app
+
 
 
 
@@ -307,6 +303,10 @@ def show_evaluation_tab(stream_name, course_name, eval_type, eval_category, eval
                     std.write(f"{status_color} {eval_entry['status'].title()}")
                     if eval_entry.get('grade'):
                         std.write(f"**Grade:** {eval_entry['grade']}")
+                    if eval_entry.get('review_comments'):
+                        std.write(f"**Review Comments:** {eval_entry['review_comments']}")
+                    if eval_entry.get('feedback'):
+                        std.write(f"**Feedback:** {eval_entry['feedback']}")
                 
                 with col3:
                     # Create unique button key
@@ -478,118 +478,236 @@ def show_review_form(stream_name, course_name, eval_type, eval_category, eval_en
 
 ### Weekly Schedule Page Functions
 def show_weekly_schedule_page():
-    """Show weekly schedule selection and view"""
-    col1, col2, col3 = std.columns(3)
-    
+    # Page header with home button
+    col1, col2 = std.columns([2, 3])
     with col1:
         if std.button("🏠 Home", type="primary"):
             go_home()
     
     with col2:
-        std.write("### Weekly Schedule")
-        
-        # Get all scheduled courses
-        scheduled_courses = sch.get_all_scheduled_courses()
-        
-        if not scheduled_courses:
-            std.info("No courses have schedules yet. Add schedules to your courses firstd.")
-            return
-        
-        # Stream selection
-        selected_stream = std.selectbox("Select Stream", list(scheduled_courses.keys()))
-        
-        if selected_stream:
-            # Course selection
-            selected_course = std.selectbox("Select Course", scheduled_courses[selected_stream])
-            
-            if selected_course:
-                # Get and display course schedule
-                schedule_data = sch.get_course_schedule(selected_stream, selected_course)
-                
-                if schedule_data:
-                    std.write(f"**Course:** {selected_course}")
-                    std.write(f"**Duration:** {schedule_data['start_date']} to {schedule_data['end_date']}")
-                    
-                    # Weekly schedule editor
-                    show_weekly_schedule_editor(selected_stream, selected_course, schedule_data)
-
-def show_weekly_schedule_editor(stream_name, course_name, schedule_data):
-    """Show editable weekly schedule table"""
-    weekly_schedule = schedule_data.get("weekly_schedule", {})
+        std.title("📅 Weekly Schedule")
     
-    if not weekly_schedule:
-        std.warning("No weekly schedule found for this course.")
+    # Get all streams and courses
+    courses_data = stg.load_courses()
+    
+    if not courses_data["courses"]:
+        std.error("No streams or courses found. Please create streams and courses first.")
+        return
+    
+    # Stream and Course selection
+    col1, col2 = std.columns(2)
+    
+    with col1:
+        available_streams = list(courses_data["courses"].keys())
+        selected_stream = std.selectbox("📚 Select Stream", available_streams)
+    
+    with col2:
+        if selected_stream:
+            available_courses = list(courses_data["courses"][selected_stream].keys())
+            selected_course = std.selectbox("📖 Select Course", available_courses)
+    
+    if not selected_stream or not selected_course:
+        std.info("Please select both stream and course to view schedule.")
+        return
+    
+    # Get course data
+    course_data = courses_data["courses"][selected_stream][selected_course]
+    
+    # Display course details
+    std.write("---")
+    col1, col2 = std.columns(2)
+    with col1:
+        std.write(f"**Stream:** {selected_stream}")
+        std.write(f"**Course:** {selected_course}")
+        std.write(f"**Description:** {course_data.get('description', 'No description')}")
+    
+    # Check if course has schedule
+    if "schedule" not in course_data or not course_data["schedule"]:
+        std.error("❌ Course dates not set. Please set start and end dates for this course first.")
+        return
+    
+    schedule_data = course_data["schedule"]
+    
+    # Check if start and end dates are properly set
+    if not schedule_data.get("start_date") or not schedule_data.get("end_date"):
+        std.error("❌ Course start/end dates not properly configured.")
+        return
+    
+    with col2:
+        std.write(f"**Course Duration:** {schedule_data['start_date']} to {schedule_data['end_date']}")
+    
+    # Get available weeks
+    weeks = pln.get_course_weeks(schedule_data["start_date"], schedule_data["end_date"])
+    
+    if not weeks:
+        std.error("No weeks available for this course duration.")
         return
     
     # Week selection
-    week_keys = list(weekly_schedule.keys())
-    selected_week = std.selectbox("Select Week", week_keys, 
-                                 format_func=lambda x: f"Week {x} ({weekly_schedule[x]['week_start']} to {weekly_schedule[x]['week_end']})")
+    std.write("---")
+    week_options = [f"Week {w['number']} ({w['start']} to {w['end']})" for w in weeks]
+    selected_week_index = std.selectbox("📅 Select Week", range(len(week_options)), 
+                                       format_func=lambda x: week_options[x])
     
-    if selected_week:
-        std.write(f"### Week: {weekly_schedule[selected_week]['week_start']} to {weekly_schedule[selected_week]['week_end']}")
-        
-        # Create editable table
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        daily_tasks = weekly_schedule[selected_week]["daily_tasks"]
-        
-        # Use columns for better layout
-        col1, col2 = std.columns([1, 3])
-        
-        with col2:
-            # Create form for editing
-            with std.form(f"weekly_schedule_{selected_week}"):
-                updated_tasks = {}
-                for day in days:
-                    updated_tasks[day] = std.text_area(
-                        day, 
-                        value=daily_tasks.get(day, ""),
-                        height=80,
-                        key=f"{selected_week}_{day}"
-                    )
-                
-                if std.form_submit_button("Save Weekly Schedule"):
-                    # Update all days
-                    for day, task in updated_tasks.items():
-                        sch.update_weekly_task(stream_name, course_name, selected_week, day, task)
-                    std.success("Weekly schedule updated!")
-                    std.rerun()
+    selected_week = weeks[selected_week_index]
+    week_start_date = datetime.strptime(selected_week["start"], "%Y-%m-%d")
+    
+    # Display week info
+    std.write(f"### Week {selected_week['number']}: {selected_week['start']} to {selected_week['end']}")
+    
+    # Create the 7x6 schedule grid
+    show_schedule_grid(selected_stream, selected_course, selected_week, week_start_date)
+    
+    # Add plan button
+    std.write("---")
+    if std.button("➕ Add New Plan", type="primary"):
+        std.session_state.show_add_plan = True
+    
+    # Show add plan form if button clicked
+    if std.session_state.get("show_add_plan", False):
+        show_add_plan_form(selected_stream, selected_course, selected_week["number"], courses_data)
 
-def show_course_schedule_manager(stream, course_name):
-    """Show schedule management for a specific course"""
-    std.write(f"### Schedule for {course_name}")
+def show_schedule_grid(stream_name, course_name, selected_week, week_start_date):
+    """Display the 7x6 schedule grid"""
     
-    # Check if course has schedule
-    schedule_data = stream.get_course_schedule(course_name)
+    # Time slots (6 rows of 4-hour sections)
+    time_slots = [
+        "00:00-04:00", "04:00-08:00", "08:00-12:00", 
+        "12:00-16:00", "16:00-20:00", "20:00-24:00"
+    ]
     
-    if schedule_data:
-        # Display existing schedule
+    # Days of week (7 columns)
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    
+    # Get plans for this week
+    week_plans = stg.get_plans_for_week(selected_week["number"])
+    
+    # Create grid using columns
+    std.write("#### Schedule Grid")
+    
+    # Header row with days
+    header_cols = std.columns([1] + [2]*7)  # Time column + 7 day columns
+    with header_cols[0]:
+        std.write("**Time**")
+    for i, day in enumerate(days):
+        with header_cols[i+1]:
+            # Calculate actual date for this day
+            day_date = week_start_date + timedelta(days=i)
+            std.write(f"**{day}**")
+            std.write(f"*{day_date.strftime('%m/%d')}*")
+    
+    # Create grid rows
+    for time_slot in time_slots:
+        cols = std.columns([1] + [2]*7)  # Time column + 7 day columns
+        
+        with cols[0]:
+            std.write(f"**{time_slot}**")
+            std.write('---')
+        
+        for day_index, day in enumerate(days):
+            with cols[day_index + 1]:
+                # Find plans for this day and time slot
+                day_plans = [p for p in week_plans if p["day"] == day and p["time_slot"] == time_slot]
+                
+                if day_plans:
+                    for plan in day_plans:
+                        # Determine if this plan belongs to current course
+                        is_current_course = (plan["stream_name"] == stream_name and 
+                                           plan["course_name"] == course_name)
+                        
+                        # Calculate plan date for status color
+                        plan_date = week_start_date + timedelta(days=day_index)
+                        status_color = pln.get_plan_status_color(plan, plan_date.date())
+                        
+                        if is_current_course:
+                            # Clickable button for current course plans
+                            button_text = f"{status_color} {plan['plan_title']}"
+                            # Can't have nested buttons? Not even nested expanders? jus have a button inside an expander inside a button inside an exapander and...
+                            with std.expander(button_text):
+                                show_plan_details(plan)
+                        else:
+                            # Non-clickable display for other course plans
+                            std.write(f"{status_color} *{plan['stream_name']}*")
+                            std.write(f"*{plan['course_name']}*")
+                else:
+                    # Empty cell
+                    std.write("")
+
+def show_plan_details(plan):
+    """Show plan details in a modal-like format"""
+    std.write("---")
+
+    col1, col2 = std.columns(2)
+
+    with col1:
+        std.write(f"**Stream:** {plan['stream_name']}")
+        std.write(f"**Course:** {plan['course_name']}")
+        std.write(f"**Title:** {plan['plan_title']}")
+        std.write(f"**Description:** {plan['plan_description']}")
+
+    with col2:
+
+        if std.button("Mark as Completed", key=f"plan_{plan['id']}"):
+            stg.update_plan_status(plan['id'], 'completed')
+            std.success("Plan had been marked completed")
+            std.rerun()
+    std.write('---')
+    
+def show_add_plan_form(default_stream, default_course, week_number, courses_data):
+    """Show form to add a new plan"""
+    std.write("---")
+    std.write("### ➕ Add New Plan")
+    
+    with std.form("add_plan_form"):
         col1, col2 = std.columns(2)
+        
         with col1:
-            std.write(f"**Start Date:** {schedule_data['start_date']}")
-            std.write(f"**End Date:** {schedule_data['end_date']}")
-            std.write(f"**Duration:** {schedule_data.get('duration_months', 1)} months")
+            # Stream selection
+            all_streams = list(courses_data["courses"].keys())
+            stream_index = all_streams.index(default_stream) if default_stream in all_streams else 0
+            selected_stream = std.selectbox("Stream", all_streams, index=stream_index)
+            
+            # Course selection
+            if selected_stream:
+                all_courses = list(courses_data["courses"][selected_stream].keys())
+                course_index = all_courses.index(default_course) if default_course in all_courses else 0
+                selected_course = std.selectbox("Course", all_courses, index=course_index)
         
         with col2:
-            # Use a form instead of expander for editing
-            std.write("**Edit End Date:**")
-            new_end_date = std.date_input("New End Date", 
-                                        value=datetime.strptime(schedule_data['end_date'], "%Y-%m-%d").date(),
-                                        key=f"edit_date_{course_name}")
-            if std.button("Update End Date", key=f"update_{course_name}"):
-                result = stream.update_course_end_date(course_name, new_end_date.strftime("%Y-%m-%d"))
-                std.success(result)
-                std.rerun()
-    else:
-        # Use a form instead of expander for adding schedule
-        std.write("**Add Schedule:**")
-        start_date = std.date_input("Start Date", value=datetime.now().date(), key=f"start_date_{course_name}")
-        duration = std.number_input("Duration (months)", min_value=1, max_value=12, value=1, key=f"duration_{course_name}")
+            # Day and time selection  
+            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            selected_day = std.selectbox("Day", days)
+            
+            time_slots = [
+                "00:00-04:00", "04:00-08:00", "08:00-12:00", 
+                "12:00-16:00", "16:00-20:00", "20:00-24:00"
+            ]
+            selected_time_slot = std.selectbox("Time Slot", time_slots)
         
-        if std.button("Add Schedule", key=f"add_schedule_{course_name}"):
-            result = stream.add_course_schedule(course_name, start_date.strftime("%Y-%m-%d"), duration)
-            std.success(result)
-            std.rerun()
+        # Plan details
+        plan_title = std.text_input("Plan Title", placeholder="Enter plan title...")
+        plan_description = std.text_area("Plan Description", placeholder="Enter plan description...")
+        
+        # Form buttons
+        col1, col2, col3 = std.columns(3)
+        with col1:
+            submitted = std.form_submit_button("💾 Create Plan", type="primary")
+        with col2:
+            if std.form_submit_button("❌ Cancel"):
+                std.session_state.show_add_plan = False
+                std.rerun()
+        
+        if submitted:
+            if plan_title and plan_description:
+                plan_id = stg.add_plan(
+                    selected_stream, selected_course, plan_title, 
+                    plan_description, week_number, selected_day, selected_time_slot
+                )
+                std.success(f"Plan '{plan_title}' created successfully!")
+                std.session_state.show_add_plan = False
+                std.rerun()
+            else:
+                std.error("Please fill in both title and description.")
 
 
 ### Streams Page Functions
@@ -662,8 +780,6 @@ def show_stream_details_page():
                             std.write(f"**Schedule:** {schedule_info.get('start_date', 'N/A')} to {schedule_info.get('end_date', 'N/A')}")
                         else:
                             std.write("**Schedule:** Not set")
-                        
-                        show_course_schedule_manager(stream, course_name)
         
         with tab2:
             # Add course functionality
@@ -724,7 +840,7 @@ def show_stream_details_page():
                         # TODO: implement archiving logic
                         # Archive course button
                         # if std.button(f"Archive {course_name}"):
-                        # ddo something
+                        # do something
                         
 
 ### Main Home Page Functions

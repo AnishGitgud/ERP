@@ -13,6 +13,7 @@ DATA_DIR = "data"   # Directory to store data files
 STREAMS_FILE = os.path.join(DATA_DIR, "streams.json")  # File to store stream info
 COURSES_FILE = os.path.join(DATA_DIR, "courses.json")  # File to store course info
 EVALUATIONS_FILE = os.path.join(DATA_DIR, "evaluations.json")   # File to store evaluation info
+PLANS_FILE = os.path.join(DATA_DIR, "plans.json")   # File to store plan info
 
 
 # ensure the data directory exists
@@ -20,6 +21,8 @@ def ensure_data_dir():
     """Ensure the data directory exists."""
     os.makedirs(DATA_DIR, exist_ok=True)
 
+
+# Streams and course functions
 def load_streams():
     """Load ze streams from ze json file."""
     ensure_data_dir()
@@ -201,3 +204,60 @@ def store_course_evals_in_course_json(stream_name, course_name, course_score):
         "evaluations": course_score
     })
     save_courses(courses_data)
+
+# Plans storage functions
+def load_plans():
+    """Load all plans from plans.json"""
+    if not os.path.exists(PLANS_FILE):
+        default_plans = {
+            "plans": [],
+            "last_updated": datetime.now().isoformat()
+        }
+        save_plans(default_plans)
+        return default_plans
+    
+    with open(PLANS_FILE, 'r') as f:
+        return json.load(f)
+    
+def save_plans(data):
+    """Save plans data to plans.json"""
+    ensure_data_dir()
+    data["last_updated"] = datetime.now().isoformat()
+    with open(PLANS_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def add_plan(stream_name, course_name, plan_title, plan_description, week_number, day, time_slot):
+    """Add a new plan"""
+    plans_data = load_plans()
+    
+    plan = {
+        "id": len(plans_data["plans"]) + 1,
+        "stream_name": stream_name,
+        "course_name": course_name,
+        "plan_title": plan_title,
+        "plan_description": plan_description,
+        "week_number": week_number,
+        "day": day,
+        "time_slot": time_slot,
+        "status": "pending",  # pending, completed
+        "created_date": datetime.now().isoformat()
+    }
+    
+    plans_data["plans"].append(plan)
+    save_plans(plans_data)
+    return plan["id"]
+
+def get_plans_for_week(week_number):
+    """Get all plans for a specific week"""
+    plans_data = load_plans()
+    return [plan for plan in plans_data["plans"] if plan["week_number"] == week_number]
+
+def update_plan_status(plan_id, status):
+    """Update plan status (completed/pending)"""
+    plans_data = load_plans()
+    for plan in plans_data["plans"]:
+        if plan["id"] == plan_id:
+            plan["status"] = status
+            save_plans(plans_data)
+            return True
+    return False

@@ -1,11 +1,13 @@
 """
-Schedule management module for courses.
-Handles course scheduling with start/end dates and weekly schedule views.
+Schedule management module for courses with plan-based system.
+Handles course scheduling with start/end dates and plan management.
 """
 
 from datetime import datetime, timedelta
-import calendar
+import json
+import os
 from modules import storage as stg
+
 
 def add_course_schedule(stream_name, course_name, start_date, duration_months=1):
     """
@@ -37,8 +39,7 @@ def add_course_schedule(stream_name, course_name, start_date, duration_months=1)
             courses_data["courses"][stream_name][course_name]["schedule"] = {
                 "start_date": start_date,
                 "end_date": end_dt.strftime("%Y-%m-%d"),
-                "duration_months": duration_months,
-                "weekly_schedule": initialize_weekly_schedule(start_dt, end_dt)
+                "duration_months": duration_months
             }
             stg.save_courses(courses_data)
             return f"Schedule added for {course_name}: {start_date} to {end_dt.strftime('%Y-%m-%d')}"
@@ -60,15 +61,6 @@ def update_course_end_date(stream_name, course_name, new_end_date):
             "schedule" in courses_data["courses"][stream_name][course_name]):
             
             courses_data["courses"][stream_name][course_name]["schedule"]["end_date"] = new_end_date
-            
-            # Recalculate weekly schedule with new end date
-            start_date = courses_data["courses"][stream_name][course_name]["schedule"]["start_date"]
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-            end_dt = datetime.strptime(new_end_date, "%Y-%m-%d")
-            
-            courses_data["courses"][stream_name][course_name]["schedule"]["weekly_schedule"] = \
-                initialize_weekly_schedule(start_dt, end_dt)
-            
             stg.save_courses(courses_data)
             return f"End date updated for {course_name}: {new_end_date}"
         else:
@@ -76,35 +68,6 @@ def update_course_end_date(stream_name, course_name, new_end_date):
             
     except ValueError:
         return "Invalid date format. Use YYYY-MM-DD"
-
-def initialize_weekly_schedule(start_date, end_date):
-    """Initialize weekly schedule structure for a course duration"""
-    weekly_schedule = {}
-    current_date = start_date
-    
-    while current_date <= end_date:
-        # Get week start (Monday)
-        week_start = current_date - timedelta(days=current_date.weekday())
-        week_key = week_start.strftime("%Y-W%U")  # Year-Week format
-        
-        if week_key not in weekly_schedule:
-            weekly_schedule[week_key] = {
-                "week_start": week_start.strftime("%Y-%m-%d"),
-                "week_end": (week_start + timedelta(days=6)).strftime("%Y-%m-%d"),
-                "daily_tasks": {
-                    "Monday": "",
-                    "Tuesday": "",
-                    "Wednesday": "",
-                    "Thursday": "",
-                    "Friday": "",
-                    "Saturday": "",
-                    "Sunday": ""
-                }
-            }
-        
-        current_date += timedelta(days=7)
-    
-    return weekly_schedule
 
 def get_course_schedule(stream_name, course_name):
     """Get the complete schedule for a course"""
@@ -117,25 +80,6 @@ def get_course_schedule(stream_name, course_name):
         return courses_data["courses"][stream_name][course_name]["schedule"]
     
     return None
-
-def update_weekly_task(stream_name, course_name, week_key, day, task):
-    """Update a specific day's task in the weekly schedule"""
-    courses_data = stg.load_courses()
-    
-    if (stream_name in courses_data["courses"] and 
-        course_name in courses_data["courses"][stream_name] and
-        "schedule" in courses_data["courses"][stream_name][course_name]):
-        
-        schedule = courses_data["courses"][stream_name][course_name]["schedule"]
-        if ("weekly_schedule" in schedule and 
-            week_key in schedule["weekly_schedule"] and
-            day in schedule["weekly_schedule"][week_key]["daily_tasks"]):
-            
-            schedule["weekly_schedule"][week_key]["daily_tasks"][day] = task
-            stg.save_courses(courses_data)
-            return f"Updated {day} task for week {week_key}"
-    
-    return "Failed to update task"
 
 def get_all_scheduled_courses():
     """Get all courses that have schedules across all streams"""
@@ -150,3 +94,35 @@ def get_all_scheduled_courses():
                 scheduled_courses[stream_name].append(course_name)
     
     return scheduled_courses
+
+def calculate_week_dates(course_start_date, week_number):
+    """Calculate start and end dates for a given week number"""
+    start_date = datetime.strptime(course_start_date, "%Y-%m-%d")
+    week_start = start_date + timedelta(days=(week_number - 1) * 7)
+    week_end = week_start + timedelta(days=6)
+    return week_start, week_end
+
+def get_course_weeks(course_start_date, course_end_date):
+    """Get all available weeks for a course"""
+    start_date = datetime.strptime(course_start_date, "%Y-%m-%d")
+    end_date = datetime.strptime(course_end_date, "%Y-%m-%d")
+    
+    weeks = []
+    current_week_start = start_date
+    week_number = 1
+    
+    while current_week_start <= end_date:
+        week_end = current_week_start + timedelta(days=6)
+        if week_end > end_date:
+            week_end = end_date
+            
+        weeks.append({
+            "number": week_number,
+            "start": current_week_start.strftime("%Y-%m-%d"),
+            "end": week_end.strftime("%Y-%m-%d")
+        })
+        
+        current_week_start += timedelta(days=7)
+        week_number += 1
+        
+    return weeks
